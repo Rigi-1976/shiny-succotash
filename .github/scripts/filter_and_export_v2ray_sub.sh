@@ -22,10 +22,17 @@ FAST_INDEXES=$(awk '/ms$/ && $NF+0 < 200 {print NR-1}' "$TMP_PING")
 # List all nodes to a file (plain text)
 v2sub list > "$TMP_LIST"
 
+# Output debug info
+echo "---- ping_results.txt ----"
+cat "$TMP_PING"
+echo "---- all_nodes.txt ----"
+cat "$TMP_LIST"
+echo "---- Filtered indexes ----"
+echo "$FAST_INDEXES"
+
 # Extract the corresponding lines for fast nodes
 > "$TMP_FILTERED"
 for idx in $FAST_INDEXES; do
-    # v2sub list output is typically 1-based; adjust if needed
     NODE_LINE=$(sed -n "$((idx+1))p" "$TMP_LIST")
     echo "$NODE_LINE" >> "$TMP_FILTERED"
 done
