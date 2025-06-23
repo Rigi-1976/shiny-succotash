@@ -110,5 +110,5 @@ def main():
 
 print(f"Successfully created filtered subscription file at '{OUTPUT_FILE}'")
 
-if name == "main":
+if __name__ == "__main__":
     main()
