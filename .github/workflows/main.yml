@@ -33,14 +33,9 @@ jobs:
 
       # Step 4: Run v2sub with the correct commands
       - name: Run Real Connectivity Test and Filter
-        run: |
-          # This command is the same, but now it uses the version installed by pip
-          v2sub -s "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" \
-                --speed \
-                -o ./filtered_sub.txt \
-        
+         run: |
+          v2sub sub --url "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" --test --out ./filtered_sub.txt
           echo "Testing complete. Filtered list saved to filtered_sub.txt"
-
       # Step 5: Commit the new filtered list back to the repository
       - name: Commit and Push new subscription file
         uses: stefanzweifel/git-auto-commit-action@v5
