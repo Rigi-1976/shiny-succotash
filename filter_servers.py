@@ -17,7 +17,7 @@ UPSTREAM_SUBSCRIPTION_URLS = [
 OUTPUT_FILE = "filtered_sub.txt"
 
 # Maximum latency in milliseconds. Servers slower than this will be removed.
-LATENCY_THRESHOLD_MS = 3800
+LATENCY_THRESHOLD_MS = 500
 
 # Number of concurrent workers to test servers
 MAX_WORKERS = 50
