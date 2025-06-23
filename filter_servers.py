@@ -3,9 +3,11 @@ import base64
 import socket
 import time
 import json
-import random  # <-- To shuffle the servers
+import random
+from urllib.parse import urlparse # <-- NEW: To help parse VLESS links
 
 # --- Configuration ---
+# !!! IMPORTANT: Change this to your new VLESS link !!!
 UPSTREAM_SUBSCRIPTION_URLS = [
     "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless"
 ]
@@ -13,9 +15,7 @@ OUTPUT_FILE = "filtered_sub.txt"
 LATENCY_THRESHOLD_MS = 800
 
 # --- DIAGNOSTIC SETTINGS ---
-# We will test one-by-one to be safe and avoid resource limits.
 MAX_WORKERS = 1
-# We will stop the test after 25 minutes to make sure the script always finishes.
 PROCESS_TIMEOUT_SECONDS = 25 * 60
 
 # --- End of Configuration ---
@@ -24,10 +24,11 @@ def get_configs_from_subscription(url):
     """Fetches and decodes configs from a subscription URL."""
     try:
         print(f"Fetching subscription from: {url}")
+        # For VLESS and other plain text lists, we don't need to base64 decode
         response = requests.get(url, timeout=20)
         response.raise_for_status()
-        decoded_content = base64.b64decode(response.content).decode('utf-8')
-        return decoded_content.splitlines()
+        # The VLESS file is not Base64 encoded, it's just plain text
+        return response.text.splitlines()
     except Exception as e:
         print(f"ERROR fetching subscription {url}: {e}")
         return []
@@ -43,15 +44,30 @@ def test_tcp_latency(ip, port, timeout=2):
         return None
 
 def extract_server_info(config_link):
-    """Extracts server address and port from a vmess link."""
+    """
+    --- UPDATED FUNCTION ---
+    Extracts server address and port from vmess or vless links.
+    """
     try:
         if config_link.startswith("vmess://"):
+            # Handle VMess
             padding_needed = len(config_link[8:]) % 4
             padded_b64 = config_link[8:] + "=" * padding_needed
             decoded_json_str = base64.b64decode(padded_b64).decode('utf-8')
             config_json = json.loads(decoded_json_str)
             return config_json.get('add'), int(config_json.get('port', 0))
-    except Exception:
+
+        elif config_link.startswith("vless://"):
+            # Handle VLESS
+            # Use urlparse for robust parsing of vless links
+            parsed_url = urlparse(config_link)
+            address = parsed_url.hostname
+            port = parsed_url.port
+            if address and port:
+                return address, int(port)
+
+    except Exception as e:
+        print(f"    [ERROR] Could not parse config link: {config_link[:40]}... | Error: {e}")
         return None, None
     return None, None
 
@@ -67,14 +83,11 @@ def main():
     
     if not all_configs:
         print("Could not fetch any configs. Exiting.")
-        # Still write an empty file to complete the workflow
         with open(OUTPUT_FILE, 'w') as f:
             f.write("")
         return
 
     unique_configs = list(set(all_configs))
-    
-    # --- NEW: Shuffle the list to see if the crash is random or fixed ---
     random.shuffle(unique_configs)
     print(f"Found and shuffled {len(unique_configs)} unique server configs.")
 
@@ -83,7 +96,6 @@ def main():
     
     print("Starting server tests one-by-one...")
     for i, config in enumerate(unique_configs):
-        # --- NEW: Check if we have run out of time ---
         elapsed_time = time.time() - script_start_time
         if elapsed_time > PROCESS_TIMEOUT_SECONDS:
             print(f"\n--- TIME LIMIT REACHED ({PROCESS_TIMEOUT_SECONDS / 60} minutes) ---")
@@ -98,11 +110,14 @@ def main():
             if latency is not None and latency < LATENCY_THRESHOLD_MS:
                 print(f"    [GOOD] Latency: {latency}ms. Added to list.")
                 good_configs.append(config)
+        else:
+            print(f"    [SKIP] Could not extract server info from link.")
 
     print(f"\n--- FINISHED TESTING ---")
     print(f"Found {len(good_configs)} servers that meet the criteria.")
     
     final_subscription_content = "\n".join(good_configs)
+    # The final subscription list should be base64 encoded for V2Ray apps
     encoded_subscription = base64.b64encode(final_subscription_content.encode('utf-8')).decode('utf-8')
 
     with open(OUTPUT_FILE, 'w') as f:
