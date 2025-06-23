@@ -1,0 +1,50 @@
+name: Filter V2Ray Servers
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # Step 1: Checkout the repository with full history
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for git pull to work correctly
+
+      # Step 2: Synchronize with remote repository FIRST
+      - name: Pull latest changes
+        run: git pull
+
+      # Step 3: Set up Python
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      # Step 4: Install dependencies
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      # Step 5: Run the Python script
+      - name: Run Filter Script
+        run: python filter_servers.py
+
+      # Step 6: Commit the result
+      - name: Commit and Push new subscription file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update filtered subscription link"
+          file_pattern: 'filtered_sub.txt'
