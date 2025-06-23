@@ -20,7 +20,7 @@ OUTPUT_FILE = "filtered_sub.txt"
 LATENCY_THRESHOLD_MS = 500
 
 # Number of concurrent workers to test servers
-MAX_WORKERS = 50
+MAX_WORKERS = 10
 
 # --- End of Configuration ---
 
