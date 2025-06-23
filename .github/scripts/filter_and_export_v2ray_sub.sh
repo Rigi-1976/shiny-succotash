@@ -19,8 +19,8 @@ v2sub ping > "$TMP_PING"
 # Find indexes of nodes with delay < 200ms
 FAST_INDEXES=$(awk '/ms$/ && $NF+0 < 200 {print NR-1}' "$TMP_PING")
 
-# Get node config file (Update path if yours is different)
-cp ~/.v2sub/nodes.json "$TMP_NODES"
+# Export current nodes to JSON
+v2sub list --json > "$TMP_NODES"
 
 # Extract corresponding nodes and format as VLESS, then save
 > "$TMP_FILTERED"
