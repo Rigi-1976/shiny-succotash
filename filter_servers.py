@@ -20,19 +20,29 @@ PROCESS_TIMEOUT_SECONDS = 25 * 60
 
 # --- End of Configuration ---
 
+import base64
+
 def get_configs_from_subscription(url):
-    """Fetches and decodes configs from a subscription URL."""
+    """Fetches and decodes configs from a subscription URL (supports both base64 and plain)."""
     try:
-        print(f"Fetching subscription from: {url}")
-        # For VLESS and other plain text lists, we don't need to base64 decode
-        response = requests.get(url, timeout=20)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
-        # The VLESS file is not Base64 encoded, it's just plain text
+        content = response.content
+        try:
+            # Try to decode as base64
+            decoded = base64.b64decode(content, validate=True).decode('utf-8')
+            lines = decoded.splitlines()
+            # If decoding produces mostly lines starting with vless:// or vmess://, assume success
+            if sum(1 for l in lines if l.startswith("vless://") or l.startswith("vmess://")) > 0:
+                return lines
+        except Exception:
+            # Not base64, treat as plain text
+            pass
         return response.text.splitlines()
     except Exception as e:
-        print(f"ERROR fetching subscription {url}: {e}")
+        print(f"Error fetching subscription {url}: {e}")
         return []
-
+        
 def test_tcp_latency(ip, port, timeout=2):
     """Tests TCP connection latency to an IP and port."""
     start_time = time.time()
