@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Add the subscription links from the original GitHub script here
 # You can add more than one
 UPSTREAM_SUBSCRIPTION_URLS = [
-    "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/networks/tcp,
+    "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/networks/tcp",
     # You can add other subscription links here if you want
 ]
 
