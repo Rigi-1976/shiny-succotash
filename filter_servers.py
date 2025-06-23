@@ -12,11 +12,11 @@ UPSTREAM_SUBSCRIPTION_URLS = [
     "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/countries/ir/mixed"
 ]
 OUTPUT_FILE = "filtered_sub.txt"
-LATENCY_THRESHOLD_MS = 200
+LATENCY_THRESHOLD_MS = 1000
 
 # --- DIAGNOSTIC SETTINGS ---
-MAX_WORKERS = 50
-PROCESS_TIMEOUT_SECONDS = 5 * 60
+MAX_WORKERS = 20
+PROCESS_TIMEOUT_SECONDS = 25 * 60
 
 # --- End of Configuration ---
 
