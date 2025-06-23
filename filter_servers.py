@@ -9,7 +9,7 @@ from urllib.parse import urlparse # <-- NEW: To help parse VLESS links
 # --- Configuration ---
 # !!! IMPORTANT: Change this to your new VLESS link !!!
 UPSTREAM_SUBSCRIPTION_URLS = [
-    "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/protocols/vless"
+    "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/networks/tcp"
 ]
 OUTPUT_FILE = "filtered_sub.txt"
 LATENCY_THRESHOLD_MS = 800
