@@ -1,44 +1,33 @@
-name: Filter V2Ray Servers with v2sub (pip install)
-
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
+name: Filter and Export V2Ray Subscriptions
 
 on:
-  schedule:
-    - cron: '*/30 * * * *' # Runs every 4 hours
   workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *' # Runs every 6 hours (adjust as needed)
 
 jobs:
-  build:
+  filter_v2ray:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
-      # Step 1: Check out your repository
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # Step 2: Set up Python, which is needed to run pip
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
 
-      # Step 3: Install v2sub using pip (The correct and easiest method)
-      - name: Install v2sub tool
-        run: |
-          pip install v2sub
+    - name: Install requirements
+      run: |
+        pip install v2sub jq
 
-      # Step 4: Run v2sub with the correct commands
-      - name: Run Real Connectivity Test and Filter
-        run: |
-          v2sub sub --url "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" --test --out ./filtered_sub.txt
-          echo "Testing complete. Filtered list saved to filtered_sub.txt"
-      # Step 5: Commit the new filtered list back to the repository
-      - name: Commit and Push new subscription file
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update filtered subscription with real-world tested servers"
-          file_pattern: 'filtered_sub.txt'
+    - name: Run filter and export script
+      run: |
+        chmod +x .github/scripts/filter_and_export_v2ray_sub.sh
+        .github/scripts/filter_and_export_v2ray_sub.sh
+
+    - name: Commit and push filtered subscription
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Auto-update filtered V2Ray subscription"
+        file_pattern: 'filtered_sub.txt'
