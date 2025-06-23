@@ -1,4 +1,4 @@
-name: Filter V2Ray Servers with sub-checker
+name: Filter V2Ray Servers with v2sub (airborne007 fork)
 
 concurrency:
   group: ${{ github.workflow }}
@@ -22,33 +22,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Step 2: Download and set up the sub-checker tool
-      - name: Download and Prepare sub-checker
+      # Step 2: Download and set up the v2sub tool from the repository you found
+      - name: Download and Prepare v2sub
         run: |
-          # Fetch the latest version of sub-checker for Linux
-          LATEST_URL=$(curl -sL "https://api.github.com/repos/LalatinaHub/sub-checker/releases/latest" | grep -o "https://github.com/LalatinaHub/sub-checker/releases/download/v.*-linux-amd64.tar.gz")
-          echo "Downloading sub-checker from ${LATEST_URL}"
+          # Fetch the latest version of v2sub for Linux from airborne007/v2sub
+          LATEST_URL=$(curl -sL "https://api.github.com/repos/airborne007/v2sub/releases/latest" | grep -o "https://github.com/airborne007/v2sub/releases/download/.*-linux-amd64.zip")
+          echo "Downloading v2sub from ${LATEST_URL}"
           
-          # Download and extract the tool
-          curl -sL -o sub-checker.tar.gz "${LATEST_URL}"
-          tar -xvf sub-checker.tar.gz
+          # Download and unzip the tool
+          curl -sL -o v2sub.zip "${LATEST_URL}"
+          unzip -o v2sub.zip
           
           # Make the tool executable
-          chmod +x ./sub-checker
-          echo "sub-checker is ready."
+          chmod +x ./v2sub
+          echo "v2sub is ready."
 
-      # Step 3: Run sub-checker to test and filter your subscription
+      # Step 3: Run v2sub to test and filter your subscription
       - name: Run Real Connectivity Test
         run: |
           # This command does everything:
-          # -sub: Your subscription link
-          # -o: The output file for the filtered subscription
-          # -sc 10: Runs a speed test on the fastest 10 nodes (implies a real connectivity check)
-          # -t 4000: Sets a 4000ms (4 second) timeout for each test
-          ./sub-checker -sub "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" \
-                        -o ./filtered_sub.txt \
-                        -sc 10 \
-                        -t 4000
+          # --sub: Your subscription link
+          # --test_url: The URL to test against to confirm real connectivity
+          # --output: The file to save the working servers into
+          ./v2sub --sub "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" \
+                  --test_url "http://www.google.com/generate_204" \
+                  --output ./filtered_sub.txt
         
           echo "Testing complete. Filtered list saved to filtered_sub.txt"
 
@@ -58,3 +56,4 @@ jobs:
         with:
           commit_message: "Update filtered subscription with real-world tested servers"
           file_pattern: 'filtered_sub.txt'
+
