@@ -3,36 +3,33 @@ import base64
 import socket
 import time
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import random  # <-- To shuffle the servers
 
 # --- Configuration ---
-# Add the subscription links from the original GitHub script here
-# You can add more than one
 UPSTREAM_SUBSCRIPTION_URLS = [
-    "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/networks/tcp",
-    # You can add other subscription links here if you want
+    "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscriptions/tcp.txt"
 ]
-
-# The file where the filtered subscription will be saved
 OUTPUT_FILE = "filtered_sub.txt"
+LATENCY_THRESHOLD_MS = 800
 
-# Maximum latency in milliseconds. Servers slower than this will be removed.
-LATENCY_THRESHOLD_MS = 500
-
-# Number of concurrent workers to test servers
-MAX_WORKERS = 10
+# --- DIAGNOSTIC SETTINGS ---
+# We will test one-by-one to be safe and avoid resource limits.
+MAX_WORKERS = 1
+# We will stop the test after 25 minutes to make sure the script always finishes.
+PROCESS_TIMEOUT_SECONDS = 25 * 60
 
 # --- End of Configuration ---
 
 def get_configs_from_subscription(url):
     """Fetches and decodes configs from a subscription URL."""
     try:
-        response = requests.get(url, timeout=10)
+        print(f"Fetching subscription from: {url}")
+        response = requests.get(url, timeout=20)
         response.raise_for_status()
         decoded_content = base64.b64decode(response.content).decode('utf-8')
         return decoded_content.splitlines()
     except Exception as e:
-        print(f"Error fetching subscription {url}: {e}")
+        print(f"ERROR fetching subscription {url}: {e}")
         return []
 
 def test_tcp_latency(ip, port, timeout=2):
@@ -41,74 +38,78 @@ def test_tcp_latency(ip, port, timeout=2):
     try:
         with socket.create_connection((ip, port), timeout=timeout):
             end_time = time.time()
-            return int((end_time - start_time) * 1000)  # Return latency in ms
-    except (socket.timeout, ConnectionRefusedError, OSError):
+            return int((end_time - start_time) * 1000)
+    except Exception:
         return None
 
 def extract_server_info(config_link):
     """Extracts server address and port from a vmess link."""
     try:
         if config_link.startswith("vmess://"):
-            decoded_json_str = base64.b64decode(config_link[8:]).decode('utf-8')
+            padding_needed = len(config_link[8:]) % 4
+            padded_b64 = config_link[8:] + "=" * padding_needed
+            decoded_json_str = base64.b64decode(padded_b64).decode('utf-8')
             config_json = json.loads(decoded_json_str)
             return config_json.get('add'), int(config_json.get('port', 0))
     except Exception:
         return None, None
     return None, None
 
-
 def main():
-    """Main function to run the filtering process."""
-    print("Fetching all configs...")
+    """Main diagnostic function."""
+    script_start_time = time.time()
+    print("--- STARTING DIAGNOSTIC RUN ---")
+    print(f"Timeout is set to {PROCESS_TIMEOUT_SECONDS / 60} minutes.")
+    
     all_configs = []
     for url in UPSTREAM_SUBSCRIPTION_URLS:
         all_configs.extend(get_configs_from_subscription(url))
     
-    unique_configs = list(set(all_configs))
-    print(f"Found {len(unique_configs)} unique server configs.")
-
-    good_configs = []
-    
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_config = {}
-        for config in unique_configs:
-            address, port = extract_server_info(config)
-            if address and port:
-                future = executor.submit(test_tcp_latency, address, port)
-                future_to_config[future] = config
-
-        for i, future in enumerate(as_completed(future_to_config)):
-            config = future_to_config[future]
-            try:
-                latency = future.result()
-                if latency is not None and latency < LATENCY_THRESHOLD_MS:
-                    print(f"  [GOOD] {config[:30]}... | Latency: {latency}ms")
-                    good_configs.append(config)
-                else:
-                    # Optional: uncomment to see rejected servers
-                    # print(f"  [BAD] {config[:30]}... | Latency: {latency or 'Timeout'}")
-                    pass
-            except Exception as e:
-                # print(f"Error testing config {config[:30]}...: {e}")
-                pass
-            
-            # Print progress
-            print(f"Progress: {i+1}/{len(unique_configs)} tested. Found {len(good_configs)} good servers.", end='\r')
-
-    print(f"\nFinished testing. Found {len(good_configs)} servers that meet the criteria.")
-
-    if not good_configs:
-        print("No good servers found. Exiting.")
+    if not all_configs:
+        print("Could not fetch any configs. Exiting.")
+        # Still write an empty file to complete the workflow
+        with open(OUTPUT_FILE, 'w') as f:
+            f.write("")
         return
 
-    # Create the final subscription file
+    unique_configs = list(set(all_configs))
+    
+    # --- NEW: Shuffle the list to see if the crash is random or fixed ---
+    random.shuffle(unique_configs)
+    print(f"Found and shuffled {len(unique_configs)} unique server configs.")
+
+    good_configs = []
+    total_to_check = len(unique_configs)
+    
+    print("Starting server tests one-by-one...")
+    for i, config in enumerate(unique_configs):
+        # --- NEW: Check if we have run out of time ---
+        elapsed_time = time.time() - script_start_time
+        if elapsed_time > PROCESS_TIMEOUT_SECONDS:
+            print(f"\n--- TIME LIMIT REACHED ({PROCESS_TIMEOUT_SECONDS / 60} minutes) ---")
+            print("Stopping tests to save results.")
+            break
+            
+        print(f"--> [{(i+1)}/{total_to_check}] Testing: {config[:40]}...")
+        
+        address, port = extract_server_info(config)
+        if address and port:
+            latency = test_tcp_latency(address, port)
+            if latency is not None and latency < LATENCY_THRESHOLD_MS:
+                print(f"    [GOOD] Latency: {latency}ms. Added to list.")
+                good_configs.append(config)
+
+    print(f"\n--- FINISHED TESTING ---")
+    print(f"Found {len(good_configs)} servers that meet the criteria.")
+    
     final_subscription_content = "\n".join(good_configs)
     encoded_subscription = base64.b64encode(final_subscription_content.encode('utf-8')).decode('utf-8')
 
     with open(OUTPUT_FILE, 'w') as f:
         f.write(encoded_subscription)
 
-print(f"Successfully created filtered subscription file at '{OUTPUT_FILE}'")
+    print(f"Successfully created/updated subscription file at '{OUTPUT_FILE}'")
+    print("--- DIAGNOSTIC RUN COMPLETE ---")
 
 if __name__ == "__main__":
     main()
