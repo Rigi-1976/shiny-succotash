@@ -1,6 +1,5 @@
 name: Filter V2Ray Servers
 
-# NEW: Prevents the workflow from running multiple times at once
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
@@ -14,8 +13,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # NEW: This is the most important fix.
-    # It gives the workflow permission to write the new file back to your repository.
     permissions:
       contents: write
 
@@ -35,9 +32,14 @@ jobs:
 
       - name: Run Filter Script
         run: python filter_servers.py
-
+      
+      # --- NEW STEP TO FIX THE ERROR ---
+      # This pulls the latest changes from the repository before committing.
+      - name: Pull latest changes
+        run: git pull
+      
       - name: Commit and Push new subscription file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Update filtered subscription link" # Added an emoji to make commits clearer
+          commit_message: "Update filtered subscription link"
           file_pattern: 'filtered_sub.txt'
