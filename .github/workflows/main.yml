@@ -33,6 +33,7 @@ jobs:
 
       # Step 4: Run v2sub with the correct commands
       - name: Run Real Connectivity Test and Filter
+        run: |
           v2sub sub --url "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" --test --out ./filtered_sub.txt
           echo "Testing complete. Filtered list saved to filtered_sub.txt"
       # Step 5: Commit the new filtered list back to the repository
