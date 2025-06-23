@@ -1,4 +1,4 @@
-name: Filter V2Ray Servers with v2sub (airborne007 fork)
+name: Filter V2Ray Servers with v2sub (pip install)
 
 concurrency:
   group: ${{ github.workflow }}
@@ -19,41 +19,32 @@ jobs:
       # Step 1: Check out your repository
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      # Step 2: Set up Python, which is needed to run pip
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
+          python-version: '3.x'
 
-      # Step 2: Download and set up the v2sub tool from the repository you found
-      - name: Download and Prepare v2sub
+      # Step 3: Install v2sub using pip (The correct and easiest method)
+      - name: Install v2sub tool
         run: |
-          # Fetch the latest version of v2sub for Linux from airborne007/v2sub
-          LATEST_URL=$(curl -sL "https://api.github.com/repos/airborne007/v2sub/releases/latest" | grep -o "https://github.com/airborne007/v2sub/releases/download/.*-linux-amd64.zip")
-          echo "Downloading v2sub from ${LATEST_URL}"
-          
-          # Download and unzip the tool
-          curl -sL -o v2sub.zip "${LATEST_URL}"
-          unzip -o v2sub.zip
-          
-          # Make the tool executable
-          chmod +x ./v2sub
-          echo "v2sub is ready."
+          pip install v2sub
 
-      # Step 3: Run v2sub to test and filter your subscription
-      - name: Run Real Connectivity Test
+      # Step 4: Run v2sub with the correct commands
+      - name: Run Real Connectivity Test and Filter
         run: |
-          # This command does everything:
-          # --sub: Your subscription link
-          # --test_url: The URL to test against to confirm real connectivity
-          # --output: The file to save the working servers into
-          ./v2sub --sub "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" \
-                  --test_url "http://www.google.com/generate_204" \
-                  --output ./filtered_sub.txt
+          # This command is the same, but now it uses the version installed by pip
+          v2sub -s "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vless" \
+                --speed \
+                -o ./filtered_sub.txt \
+                --filter '(?i)DE|NL|FI|US|AE'
         
           echo "Testing complete. Filtered list saved to filtered_sub.txt"
 
-      # Step 4: Commit the new filtered list back to the repository
+      # Step 5: Commit the new filtered list back to the repository
       - name: Commit and Push new subscription file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update filtered subscription with real-world tested servers"
           file_pattern: 'filtered_sub.txt'
-
