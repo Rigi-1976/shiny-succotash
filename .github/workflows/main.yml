@@ -1,0 +1,40 @@
+name: Filter V2Ray Servers
+
+on:
+  # This runs the job every 1 hours. You can change the cron schedule.
+  schedule:
+    - cron: '0 */1 * * *'
+  # This allows you to run the workflow manually from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out your repository's code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      # Step 3: Install Python dependencies (only requests is needed for this script)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      # Step 4: Run the Python script to test and filter servers
+      - name: Run Filter Script
+        run: python filter_servers.py
+
+      # Step 5: Commit the new filtered_sub.txt file back to the repository
+      - name: Commit and Push new subscription file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update filtered subscription link"
+          file_pattern: 'filtered_sub.txt'
