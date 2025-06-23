@@ -38,3 +38,5 @@ jobs:
         with:
           commit_message: "Update filtered subscription link"
           file_pattern: 'filtered_sub.txt'
+          # Add this line:
+          pull: true
